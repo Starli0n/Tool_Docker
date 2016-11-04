@@ -49,9 +49,9 @@ createVM () {
 
     echo "${GREEN}Sync files..."
     # Copy bootsync.sh
-    #docker-machine ssh default "sudo touch /$VM_B2D/bootsync.sh"
-    #docker-machine ssh default "sudo chmod a+wx /$VM_B2D/bootsync.sh"
-    #docker-machine scp VM/$VM_B2D/bootsync.sh default:/$VM_B2D
+    docker-machine ssh default "sudo touch /$VM_B2D/bootsync.sh"
+    docker-machine ssh default "sudo chmod a+wx /$VM_B2D/bootsync.sh"
+    docker-machine scp VM/$VM_B2D/bootsync.sh default:/$VM_B2D
 
     # Copy bootlocal.sh
     docker-machine ssh default "sudo touch /$VM_B2D/bootlocal.sh"
@@ -110,7 +110,7 @@ synchro () {
 
     echo "${MAGENTA}Sync files..."
     ### Upload
-    #docker-machine scp VM/$VM_B2D/bootsync.sh default:/$VM_B2D
+    docker-machine scp VM/$VM_B2D/bootsync.sh default:/$VM_B2D
     docker-machine scp VM/$VM_B2D/bootlocal.sh default:/$VM_B2D
     docker-machine scp VM/$VM_B2D/.bash_profile default:/$VM_B2D
 
