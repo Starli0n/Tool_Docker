@@ -1,9 +1,8 @@
 
 ### Variables
-
-VM_B2D=var/lib/boot2docker
-VM_DOCKER=var/lib/docker
-VM_UETC=usr/local/etc
+if [ -z ${DOCKER_MACHINE_NAME+x} ]; then
+    export DOCKER_MACHINE_NAME=default # if unset set to default
+fi
 
 # ANSI COLORS
 CRE="$(echo -e '\r\033[K')"
@@ -24,11 +23,12 @@ cat << EOF
 Usage:  $(basename $0)
 Helper to improve the management of the Docker VM
                        connect to the VM
-  -c, --create-vm      create a new default VM
+  -c, --create-vm      create a new $DOCKER_MACHINE_NAME VM
   -l, --load-images    load all images (*.tar) previously backup in Image directory
   -b, --backup-images  backup all images (*.tar) from the VM to the Image directory
   -s, --sync           synchronize files between host an the VM
   -r, --restart        restart the VM
+  -g, --regen-certs    regenerate certs
   -h, --help           display this help and exit
 EOF
 }
@@ -38,54 +38,54 @@ createVM () {
 
     # Create a VM in VirtualBox
     echo "${YELLOW}Creating VM..."
-    docker-machine create --driver virtualbox default
-    eval $(docker-machine env default --shell bash)
+    docker-machine create --driver virtualbox $DOCKER_MACHINE_NAME
+    eval $(docker-machine env $DOCKER_MACHINE_NAME --shell bash)
 
     # Copy ssh keys
     echo "${BLUE}Copying SSH Keys..."
     mkdir $HOME/.ssh > /dev/null 2>&1
-    cp $HOME/.docker/machine/machines/default/id_rsa.pub $HOME/.ssh/id_docker_rsa.pub
-    cp $HOME/.docker/machine/machines/default/id_rsa $HOME/.ssh/id_docker_rsa
+    cp $HOME/.docker/machine/machines/${DOCKER_MACHINE_NAME}/id_rsa.pub $HOME/.ssh/id_docker_${DOCKER_MACHINE_NAME}_rsa.pub
+    cp $HOME/.docker/machine/machines/${DOCKER_MACHINE_NAME}/id_rsa $HOME/.ssh/id_docker_${DOCKER_MACHINE_NAME}_rsa
 
     echo "${GREEN}Sync files..."
     # Copy bootsync.sh
-    docker-machine ssh default "sudo touch /$VM_B2D/bootsync.sh"
-    docker-machine ssh default "sudo chmod a+wx /$VM_B2D/bootsync.sh"
-    docker-machine scp VM/$VM_B2D/bootsync.sh default:/$VM_B2D
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo touch /var/lib/boot2docker/bootsync.sh"
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo chmod a+wx /var/lib/boot2docker/bootsync.sh"
+    docker-machine scp VM/var/lib/boot2docker/bootsync.sh $DOCKER_MACHINE_NAME:/var/lib/boot2docker
 
     # Copy bootlocal.sh
-    docker-machine ssh default "sudo touch /$VM_B2D/bootlocal.sh"
-    docker-machine ssh default "sudo chmod a+wx /$VM_B2D/bootlocal.sh"
-    docker-machine scp VM/$VM_B2D/bootlocal.sh default:/$VM_B2D
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo touch /var/lib/boot2docker/bootlocal.sh"
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo chmod a+wx /var/lib/boot2docker/bootlocal.sh"
+    docker-machine scp VM/var/lib/boot2docker/bootlocal.sh $DOCKER_MACHINE_NAME:/var/lib/boot2docker
 
     # Copy tce.tar
-    docker-machine ssh default "sudo touch /$VM_B2D/tce.tar"
-    docker-machine ssh default "sudo chmod a+w /$VM_B2D/tce.tar"
-    docker-machine scp VM/$VM_B2D/tce.tar default:/$VM_B2D
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo touch /var/lib/boot2docker/tce.tar"
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo chmod a+w /var/lib/boot2docker/tce.tar"
+    docker-machine scp VM/var/lib/boot2docker/tce.tar $DOCKER_MACHINE_NAME:/var/lib/boot2docker
 
     # Copy rsub
-    docker-machine ssh default "sudo touch /$VM_B2D/rsub"
-    docker-machine ssh default "sudo chmod a+wx /$VM_B2D/rsub"
-    docker-machine scp VM/$VM_B2D/rsub default:/$VM_B2D
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo touch /var/lib/boot2docker/rsub"
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo chmod a+wx /var/lib/boot2docker/rsub"
+    docker-machine scp VM/var/lib/boot2docker/rsub $DOCKER_MACHINE_NAME:/var/lib/boot2docker
 
     # Copy .bash_profile
-    docker-machine ssh default "sudo touch /$VM_B2D/.bash_profile"
-    docker-machine ssh default "sudo chmod a+wx /$VM_B2D/.bash_profile"
-    docker-machine scp VM/$VM_B2D/.bash_profile default:/$VM_B2D
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo touch /var/lib/boot2docker/.bash_profile"
+    docker-machine ssh $DOCKER_MACHINE_NAME "sudo chmod a+wx /var/lib/boot2docker/.bash_profile"
+    docker-machine scp VM/var/lib/boot2docker/.bash_profile $DOCKER_MACHINE_NAME:/var/lib/boot2docker
 
     echo "${MAGENTA}Preparing local environment..."
     mkdir -p Shared
-    mkdir -p VM/$VM_B2D
-    mkdir -p VM/$VM_DOCKER
+    mkdir -p VM/var/lib/boot2docker
+    mkdir -p VM/var/lib/docker
     mkdir -p VM/home/docker
-    mkdir -p VM/$VM_UETC
+    mkdir -p VM/usr/local/etc
     mkdir -p VM/etc
 
     echo "${WHITE}Done.${NORMAL}"
 }
 
 loadImages () {
-    eval $(docker-machine env default --shell bash)
+    eval $(docker-machine env $DOCKER_MACHINE_NAME --shell bash)
 
     echo "${YELLOW}Loading images..."
     for IMAGE in $(ls -1 Image/*.tar); do
@@ -95,7 +95,7 @@ loadImages () {
 }
 
 basckupImages () {
-    eval $(docker-machine env default --shell bash)
+    eval $(docker-machine env $DOCKER_MACHINE_NAME --shell bash)
 
     echo "${BLUE}Backuping images..."
     for IMAGE in $(docker images --format "{{.Repository}}"); do
@@ -106,43 +106,59 @@ basckupImages () {
 }
 
 synchro () {
-    eval $(docker-machine env default --shell bash)
+    eval $(docker-machine env $DOCKER_MACHINE_NAME --shell bash)
 
     echo "${MAGENTA}Sync files..."
     ### Upload
-    docker-machine scp VM/$VM_B2D/bootsync.sh default:/$VM_B2D
-    docker-machine scp VM/$VM_B2D/bootlocal.sh default:/$VM_B2D
-    docker-machine scp VM/$VM_B2D/.bash_profile default:/$VM_B2D
+    docker-machine scp VM/var/lib/boot2docker/bootsync.sh $DOCKER_MACHINE_NAME:/var/lib/boot2docker
+    docker-machine scp VM/var/lib/boot2docker/bootlocal.sh $DOCKER_MACHINE_NAME:/var/lib/boot2docker
+    docker-machine scp VM/var/lib/boot2docker/.bash_profile $DOCKER_MACHINE_NAME:/var/lib/boot2docker
 
     ### Download
-    #docker-machine scp -r default:/home/docker VM/home
-    #docker-machine scp default:/$VM_UETC/bashrc VM/$VM_UETC/bashrc
-    #docker-machine scp -r default:/opt VM/
-    #docker-machine scp -r default:/etc/init.d VM/etc
-    #docker-machine scp -r default:/etc/rc.d VM/etc
+    #docker-machine scp -r $DOCKER_MACHINE_NAME:/home/docker VM/home
+    #docker-machine scp $DOCKER_MACHINE_NAME:/usr/local/etc/bashrc VM/usr/local/etc/bashrc
+    #docker-machine scp -r $DOCKER_MACHINE_NAME:/opt VM/
+    #docker-machine scp -r $DOCKER_MACHINE_NAME:/etc/init.d VM/etc
+    #docker-machine scp -r $DOCKER_MACHINE_NAME:/etc/rc.d VM/etc
+    echo "-------------------${NORMAL}"
+}
+
+regenerate_certs () {
+    eval $(docker-machine env $DOCKER_MACHINE_NAME --shell bash)
+
+    echo "${RED}Regenerating certs..."
+    docker-machine regenerate-certs $DOCKER_MACHINE_NAME
+    cp $HOME/.docker/machine/machines/${DOCKER_MACHINE_NAME}/id_rsa.pub $HOME/.ssh/id_docker_${DOCKER_MACHINE_NAME}_rsa.pub
+    cp $HOME/.docker/machine/machines/${DOCKER_MACHINE_NAME}/id_rsa $HOME/.ssh/id_docker_${DOCKER_MACHINE_NAME}_rsa
     echo "-------------------${NORMAL}"
 }
 
 boot () {
     echo "${YELLOW}Starting VM..."
-    docker-machine start default
-    eval $(docker-machine env default --shell bash)
+    docker-machine start $DOCKER_MACHINE_NAME
+    eval $(docker-machine env $DOCKER_MACHINE_NAME --shell bash)
     echo "-------------------"
 
     synchro
-    # docker-machine ssh default "sudo /etc/init.d/docker restart"
+    # docker-machine ssh $DOCKER_MACHINE_NAME "sudo /etc/init.d/docker restart"
 
     echo "${GREEN}Checking..."
-    docker-machine ssh default "cat /var/log/bootlocal.log"
-    docker-machine ssh default 'echo - tce.installed: $(ls /usr/local/tce.installed)'
-    docker-machine ssh default 'echo - bash: $(which bash)'
-    docker-machine ssh default 'echo - rsub: $(which rsub)'
+    docker-machine ssh $DOCKER_MACHINE_NAME "cat /var/log/bootlocal.log"
+    docker-machine ssh $DOCKER_MACHINE_NAME 'echo - tce.installed: $(ls /usr/local/tce.installed)'
+    docker-machine ssh $DOCKER_MACHINE_NAME 'echo - bash: $(which bash)'
+    docker-machine ssh $DOCKER_MACHINE_NAME 'echo - rsub: $(which rsub)'
     echo "-------------------"
 
     echo "${BLUE}Boot2Docker..."
-    # docker-machine ssh default
-    ssh docker@$(docker-machine ip default) -i $HOME/.ssh/id_docker_rsa
+    # docker-machine ssh $DOCKER_MACHINE_NAME
+    ssh docker@$(docker-machine ip $DOCKER_MACHINE_NAME) -i $HOME/.ssh/id_docker_${DOCKER_MACHINE_NAME}_rsa
     echo "${NORMAL}"
+}
+
+restart () {
+    echo "${RED}Stopping VM..."
+    docker-machine stop $DOCKER_MACHINE_NAME
+    boot
 }
 
 
@@ -159,6 +175,8 @@ case $i in
     -l|--load-images)   LOAD_IMAGES=true; shift;;
     -b|--backup-images) BACKUP_IMAGES=true; shift;;
     -s|--sync)          SYNC=true; shift;;
+    -r|--restart)       RESTART=true; shift;;
+    -g|--regen-certs)   REGEN_CERTS=true; shift;;
     -h|--help)          HELP=true; shift;;
     *)
     # unknown option
@@ -188,6 +206,14 @@ fi
 
 if [ "$SYNC" = true ]; then
     synchro
+fi
+
+if [ "$RESTART" = true ]; then
+    restart
+fi
+
+if [ "$REGEN_CERTS" = true ]; then
+    regenerate_certs
 fi
 
 if [ "$B2D" = true ]; then
