@@ -11,6 +11,10 @@ ln -s /var/lib/boot2docker/rsub /usr/local/bin/rsub
 mkdir -p /var/shared/default
 mount -t vboxsf -o defaults,uid=`id -u docker`,gid=`id -g docker` Default /var/shared/default
 
+# Mount a gitlab shared folder
+mkdir -p /var/shared/gitlab/backups
+mount -t vboxsf -o defaults,uid=`id -u docker`,gid=`id -g docker` Gitlab /var/shared/gitlab
+
 # Custom docker home profile
 ln -s /var/lib/boot2docker/.bash_profile /home/docker/.bash_profile
 echo '' >> /home/docker/.ashrc
