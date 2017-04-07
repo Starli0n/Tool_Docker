@@ -19,3 +19,19 @@ Tools for Docker
 ```
 
 2. Execute `docker-machine provision`
+
+## Web Server
+
+The server is composed of
+
+	-	PHP-FPM
+	-	NGINX
+	-	MariaDB
+
+It can be run with `docker-compose -f web.yml up`
+
+Forward the port `8080` on the VirtualBox VM to have the `localhost` working.
+
+Otherwise, use the `docker-machine ip` to know the IP address of the VM.
+
+Give a try with [http://localhost:8080/admin/info.php]

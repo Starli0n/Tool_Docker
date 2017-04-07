@@ -15,6 +15,10 @@ mount -t vboxsf -o defaults,uid=`id -u docker`,gid=`id -g docker` Default /var/s
 mkdir -p /var/shared/gitlab/backups
 mount -t vboxsf -o defaults,uid=`id -u docker`,gid=`id -g docker` Gitlab /var/shared/gitlab
 
+# Mount a web shared folder
+mkdir -p /var/shared/web
+mount -t vboxsf Web /var/shared/web
+
 # Custom docker home profile
 ln -s /var/lib/boot2docker/.bash_profile /home/docker/.bash_profile
 echo '' >> /home/docker/.ashrc
